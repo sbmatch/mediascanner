@@ -95,31 +95,43 @@ public class MainActivity extends AppCompatActivity {
 
     private void checkUpdate() {
         Toast.makeText(this, "正在检查新版本...", Toast.LENGTH_SHORT).show();
-        loadJson("https://sbmatch.github.io/mediascanner/app/release/output-metadata.json");
         loadJson("https://tenapi.cn/lanzou/?url=https://wwn.lanzouj.com/i8TLi06zhs1i");
     }
 
     public void loadJson(String url) {
 
         new Thread(() -> {
+            String by;
+            Looper.prepare();
             try {
                 OkHttpClient client = new OkHttpClient();
                 Request request = new Request.Builder().url(url).build();
                 Response response = client.newCall(request).execute();
+                by = Objects.requireNonNull(response.body()).string();
 
                 if (url.equals("https://tenapi.cn/lanzou/?url=https://wwn.lanzouj.com/i8TLi06zhs1i")){
-                    JSONObject update_data_json = JSONObject.parseObject(Objects.requireNonNull(response.body()).string());
+                    JSONObject update_data_json = JSONObject.parseObject(by);
                     String down_url = update_data_json.getJSONObject("data").getString("url");
-                    if (down_url != null){
-                        saveInfo("url",down_url);
-                    }
+                    saveInfo("url",down_url);
+                    loadJson("https://sbmatch.github.io/mediascanner/app/release/output-metadata.json");
                 }else {
 
-                    Message msg = new Message();
-                    Bundle data = new Bundle();
-                    data.putString("value", Objects.requireNonNull(response.body()).string());
-                    msg.setData(data);
-                    handler.sendMessage(msg);
+                    try {
+                        JSONObject update_data_json = JSONObject.parseObject(by);
+                        Object i = GsonUtils.toJson(update_data_json.get("elements")); // Gson ！使用反序列化
+                        int codeVer = JSONObject.parseObject(new org.json.JSONArray(i+"").getString(0)).getIntValue("versionCode");
+                        saveInfo("vercode",codeVer+"");
+                        if (BuildConfig.VERSION_CODE == codeVer){
+                            Toast.makeText(context, "您已经是最新版本了", Toast.LENGTH_SHORT).show();
+                        }else {
+                            Message msg = new Message();
+                            Bundle data = new Bundle();
+                            data.putString("vercode", getInfo("vercode"));
+                            data.putString("url",getInfo("url"));
+                            msg.setData(data);
+                            handler.sendMessage(msg);
+                        }
+                    }catch (Exception e){Log.e(TAG,e.getMessage(),e.fillInStackTrace());}
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -135,26 +147,9 @@ public class MainActivity extends AppCompatActivity {
             super.handleMessage(msg);
 
             Bundle data = msg.getData();
-            String val = data.getString("value");
-            JSONObject update_data_json = JSONObject.parseObject(val);
-
-            try {
-
-                Object i = GsonUtils.toJson(update_data_json.get("elements")); // Gson ！使用反序列化
-                int codeVer = JSONObject.parseObject(new org.json.JSONArray(i+"").getString(0)).getIntValue("versionCode");
-
-                if (BuildConfig.VERSION_CODE == codeVer){
-                    Toast.makeText(context, "您已经是最新版本了", Toast.LENGTH_SHORT).show();
-                    saveInfo("vercode",codeVer+"");
-                }else {
-                    startDown(getInfo("vercode"),getInfo("url"));
-                }
-
-            }catch (Exception e){
-
-                Log.e(TAG,e.getMessage(),e.fillInStackTrace());
-
-            }
+            String code = data.getString("vercode");
+            String val = data.getString("url");
+            startDown(code,val);
         }
     };
 
