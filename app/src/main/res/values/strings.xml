@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">mediascanner</string>
+    <string name="app_name">Json解析ByFastjson2</string>
     <string name="large_text">
         "Material is the metaphor.\n\n"
 
@@ -90,4 +90,6 @@
         "when a user tries to pick up one of cards.\n\n"
     </string>
     <string name="action_settings">Settings</string>
+    <string name="todo">TODO</string>
+    <string name="action_checkupdate">检查更新</string>
 </resources>
