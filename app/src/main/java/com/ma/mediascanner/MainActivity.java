@@ -96,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
     private void checkUpdate() {
         Toast.makeText(this, "正在检查新版本...", Toast.LENGTH_SHORT).show();
         loadJson("https://sbmatch.github.io/mediascanner/app/release/output-metadata.json");
-        loadJson("https://tenapi.cn/lanzou/?url=https://wwn.lanzouj.com/i8TLi06zhs1i");
+        loadJson("https://tenapi.cn/lanzou/?url=https://giaosha.lanzoul.com/i2nQ5072m8sd");
     }
 
     public void loadJson(String url) {
