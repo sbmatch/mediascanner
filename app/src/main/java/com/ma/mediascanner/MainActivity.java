@@ -174,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void startDown(String verCode,String url) {
-        mShowDialog(context,false,"","版本号："+verCode,url,"更新","取消");
+        mShowDialog(context,false,"发现新版本","版本号："+verCode,url,"更新","取消");
     }
 
     public static void mShowDialog(final Context context, boolean isCancel, String title, String msg, String srcUrl, String positive, String negative) {
