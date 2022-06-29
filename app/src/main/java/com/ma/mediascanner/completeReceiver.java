@@ -23,8 +23,7 @@ public class completeReceiver extends BroadcastReceiver {
         if (action.hashCode() == 1248865515) {
             if (action.equals(DownloadManager.ACTION_DOWNLOAD_COMPLETE)) {
                 try {
-                    Toast.makeText(context, "下载完成", Toast.LENGTH_SHORT).show();
-                    Uri apkUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", new File(BaseApplication.APK_DOWN_PATH + "update.apk"));
+                    Uri apkUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", new File(BaseApplication.APK_DOWN_PATH + "/update.apk"));
                     MainActivity.installApk(context, apkUri);
                 } catch (RuntimeException e) {
                     Log.e("error", e.getMessage());
