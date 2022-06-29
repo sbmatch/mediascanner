@@ -1,5 +1,6 @@
 package com.ma.mediascanner;
 
+import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -20,7 +21,7 @@ public class completeReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
         if (action.hashCode() == 1248865515) {
-            if (action.equals("android.intent.action.DOWNLOAD_COMPLETE")) {
+            if (action.equals(DownloadManager.ACTION_DOWNLOAD_COMPLETE)) {
                 try {
                     Toast.makeText(context, "下载完成", Toast.LENGTH_SHORT).show();
                     Uri apkUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", new File(BaseApplication.APK_DOWN_PATH + "update.apk"));

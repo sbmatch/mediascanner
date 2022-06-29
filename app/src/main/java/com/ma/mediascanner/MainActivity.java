@@ -9,6 +9,7 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -66,6 +67,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        Log.e("",context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)+"/apk/");
+
     }
 
     @Override
@@ -95,31 +98,48 @@ public class MainActivity extends AppCompatActivity {
 
     private void checkUpdate() {
         Toast.makeText(this, "正在检查新版本...", Toast.LENGTH_SHORT).show();
-        loadJson("https://sbmatch.github.io/mediascanner/app/release/output-metadata.json");
         loadJson("https://tenapi.cn/lanzou/?url=https://giaosha.lanzoul.com/i2nQ5072m8sd");
     }
 
     public void loadJson(String url) {
 
         new Thread(() -> {
+            Looper.prepare();
             try {
                 OkHttpClient client = new OkHttpClient();
                 Request request = new Request.Builder().url(url).build();
                 Response response = client.newCall(request).execute();
 
-                if (url.equals("https://tenapi.cn/lanzou/?url=https://wwn.lanzouj.com/i8TLi06zhs1i")){
+                if (url.equals("https://tenapi.cn/lanzou/?url=https://giaosha.lanzoul.com/i2nQ5072m8sd")){
                     JSONObject update_data_json = JSONObject.parseObject(Objects.requireNonNull(response.body()).string());
                     String down_url = update_data_json.getJSONObject("data").getString("url");
-                    if (down_url != null){
-                        saveInfo("url",down_url);
-                    }
+                    saveInfo("url",down_url);
+                    loadJson("https://sbmatch.github.io/mediascanner/app/release/output-metadata.json");
                 }else {
 
-                    Message msg = new Message();
-                    Bundle data = new Bundle();
-                    data.putString("value", Objects.requireNonNull(response.body()).string());
-                    msg.setData(data);
-                    handler.sendMessage(msg);
+                    try {
+
+                        JSONObject update_data_json = JSONObject.parseObject(Objects.requireNonNull(response.body()).string());
+                        Object i = GsonUtils.toJson(update_data_json.get("elements")); // Gson ！使用反序列化
+                        int codeVer = JSONObject.parseObject(new org.json.JSONArray(i+"").getString(0)).getIntValue("versionCode");
+                        saveInfo("vercode",codeVer+""); //保存远程版本号
+                        if (BuildConfig.VERSION_CODE == codeVer){
+                            Toast.makeText(context, "您已经是最新版本了", Toast.LENGTH_SHORT).show();
+                        }else {
+                            Message msg = new Message();
+                            Bundle data = new Bundle();
+                            data.putString("c", getInfo("vercode"));
+                            data.putString("u",getInfo("url"));
+                            msg.setData(data);
+                            handler.sendMessage(msg);
+                        }
+
+                    }catch (Exception e){
+
+                        Log.e(TAG,e.getMessage(),e.fillInStackTrace());
+
+                    }
+
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -135,26 +155,13 @@ public class MainActivity extends AppCompatActivity {
             super.handleMessage(msg);
 
             Bundle data = msg.getData();
-            String val = data.getString("value");
-            JSONObject update_data_json = JSONObject.parseObject(val);
+            String val = data.getString("c");
+            String url = data.getString("u");
 
-            try {
+            startDown(val,url);
 
-                Object i = GsonUtils.toJson(update_data_json.get("elements")); // Gson ！使用反序列化
-                int codeVer = JSONObject.parseObject(new org.json.JSONArray(i+"").getString(0)).getIntValue("versionCode");
 
-                if (BuildConfig.VERSION_CODE == codeVer){
-                    Toast.makeText(context, "您已经是最新版本了", Toast.LENGTH_SHORT).show();
-                    saveInfo("vercode",codeVer+"");
-                }else {
-                    startDown(getInfo("vercode"),getInfo("url"));
-                }
 
-            }catch (Exception e){
-
-                Log.e(TAG,e.getMessage(),e.fillInStackTrace());
-
-            }
         }
     };
 
@@ -165,11 +172,11 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = info.edit();
         editor.putString(key,val);
         editor.apply();
-        Log.i(key, "保存信息成功");
+        Log.i(key, "保存信息成功: "+getInfo(key));
     }
 
     public String getInfo(String key) {
-        return getSharedPreferences(key, 0).getString("conf","");
+        return getSharedPreferences(key, 0).getString(key,"");
     }
 
 
@@ -182,12 +189,13 @@ public class MainActivity extends AppCompatActivity {
 
             if ( srcUrl != null) {
                 DownloadManager downloadManager = (DownloadManager) context.getSystemService("download");
-                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(srcUrl)).setTitle(context.getString(R.string.app_name) + ".apk").setDestinationInExternalFilesDir(context, null, "apk/update.apk");
+                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(srcUrl)).setTitle(context.getString(R.string.app_name) + ".apk").setDestinationInExternalFilesDir(context,Environment.DIRECTORY_DOWNLOADS, "/update.apk");
                 Toast.makeText(context, "正在下载更新...", Toast.LENGTH_SHORT).show();
                 long downloadId = downloadManager.enqueue(request);
 
                 IntentFilter filter = new IntentFilter();
                 filter.addAction("android.intent.action.DOWNLOAD_COMPLETE");
+                filter.addAction(DownloadManager.ACTION_NOTIFICATION_CLICKED);
                 context.registerReceiver(new completeReceiver(), filter);
             }
 
@@ -208,6 +216,5 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
 
 }
