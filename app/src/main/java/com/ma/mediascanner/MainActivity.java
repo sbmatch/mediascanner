@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.database.ContentObserver;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -22,26 +21,24 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.ma.mediascanner.databinding.ActivityScrollingBinding;
 import com.ma.mediascanner.utils.AppOpsUtils;
 import com.ma.mediascanner.utils.GsonUtils;
+import com.ma.mediascanner.utils.HttpUtils;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -55,6 +52,7 @@ import okhttp3.Response;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "SrcJson";
+    public static final String APK_DOWN_PATH = "/storage/emulated/0/Android/data/"+BuildConfig.APPLICATION_ID+"/files/"+Environment.DIRECTORY_DOWNLOADS+"/update.apk";
     private static BroadcastReceiver completeReceiver = null;
     private ActivityScrollingBinding binding;
     private final Context context = this;
@@ -71,23 +69,18 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = binding.toolbar;
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = binding.fab;
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        MaterialCardView cardView = binding.card;
 
         completeReceiver = new completeReceiver();
         downloadManager = (DownloadManager) context.getSystemService("download");
 
-        if (!AppOpsUtils.checkOps(context, AppOpsManager.permissionToOp(Manifest.permission.READ_EXTERNAL_STORAGE))) {
-             request.launch(Manifest.permission.READ_EXTERNAL_STORAGE);
-        }
-
         loadJson("https://tenapi.cn/lanzou/?url=https://giaosha.lanzoul.com/i2nQ5072m8sd");
+
+        String s = "context.getExternalFilesDir(null) --------------> "+ context.getExternalFilesDir(null)
+                +"\nEnvironment.getExternalStoragePublicDirectoryEnvironment.DIRECTORY_DOWNLOADS) -------------> "+Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                +"\nEnvironment.getExternalStorageDirectory() --------------->"+ Environment.getExternalStorageDirectory();
+
+        Log.e("path",s);
 
     }
 
@@ -107,8 +100,6 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         switch (id){
-            case (int)R.id.action_settings:
-                break;
             case (int)R.id.action_update:
                 checkUpdate();
                 break;
@@ -118,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void checkUpdate() {
         Toast.makeText(this, "正在检查新版本...", Toast.LENGTH_SHORT).show();
+
         loadJson("https://sbmatch.github.io/mediascanner/app/release/output-metadata.json");
     }
 
@@ -143,8 +135,6 @@ public class MainActivity extends AppCompatActivity {
                             JSONObject update_data_json = JSONObject.parseObject(Objects.requireNonNull(response.body()).string());
                             Object i = GsonUtils.toJson(update_data_json.get("elements")); // Gson ！使用反序列化
                             int codeVer = JSONObject.parseObject(new org.json.JSONArray(i + "").getString(0)).getIntValue("versionCode");
-
-                           // Log.i("",new org.json.JSONArray(i + "").getString(0));
 
                             saveInfo("vercode", codeVer + ""); //保存远程版本号
                             if (BuildConfig.VERSION_CODE == codeVer) {
@@ -213,28 +203,7 @@ public class MainActivity extends AppCompatActivity {
 
             if ( srcUrl != null) {
 
-                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(srcUrl))
-                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-                        .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS,getString(R.string.app_name)+".apk")
-                        .setTitle(context.getString(R.string.app_name)+".apk")
-                        .setDescription("正在下载更新包");
-
-                Toast.makeText(context, "正在下载更新...", Toast.LENGTH_SHORT).show();
-
-                long downloadId = downloadManager.enqueue(request);
-
-                IntentFilter filter = new IntentFilter();
-                filter.addAction(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
-                filter.addAction(DownloadManager.ACTION_VIEW_DOWNLOADS);
-                filter.addAction(DownloadManager.ACTION_NOTIFICATION_CLICKED);
-                context.registerReceiver(completeReceiver, filter);
-
-                context.getContentResolver().registerContentObserver(Uri.parse("content://downloads/my_downloads"), true, new ContentObserver(new Handler()){
-                    @Override
-                    public void onChange(boolean selfChange, @Nullable Uri uri) {
-                        super.onChange(selfChange, uri);
-                    }
-                });
+                HttpUtils.openCustomTabs(context,srcUrl);
 
             }
 
@@ -246,15 +215,23 @@ public class MainActivity extends AppCompatActivity {
 
     public static void installApk(Context c, Uri uri) {
         try {
-            Intent intent = new Intent();
-            intent.setAction("android.intent.action.VIEW");
-            intent.setData(uri);
-            intent.setDataAndType(uri, "application/vnd.android.package-archive");
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            c.startActivity(intent);
+            Log.e("url",uri+"");
+            File f = new File(c.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)+"/update.apk");
+            Intent installAppIntent = getInstallAppIntent(Uri.fromFile(f));
+            if (installAppIntent == null) return;
+            c.startActivity(installAppIntent);
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public static Intent getInstallAppIntent(final Uri uri) {
+        if (uri == null) return null;
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        String type = "application/vnd.android.package-archive";
+        intent.setDataAndType(uri, null);
+        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        return intent;
     }
 
     private final ActivityResultLauncher<String> request = registerForActivityResult(new ActivityResultContracts.RequestPermission(),
@@ -275,4 +252,35 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         unregisterReceiver(completeReceiver);
     }
+
+
+    /***
+     *
+     *
+     *  File f = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)+"/update.apk");
+     *
+     *                 DownloadManager.Request request = new DownloadManager.Request(Uri.parse(srcUrl))
+     *                         .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+     *                         .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE)
+     *                         //.setDestinationUri(Uri.fromFile(new File(APK_DOWN_PATH,"update.apk")))
+     *                         .setDestinationUri(Uri.fromFile(f))
+     *                         .setTitle("update.apk")
+     *                         .setDescription("正在下载更新包");
+     *
+     *                 Toast.makeText(context, "正在下载更新...", Toast.LENGTH_SHORT).show();
+     *
+     *                 long downloadId = downloadManager.enqueue(request);
+     *
+     *                 IntentFilter filter = new IntentFilter();
+     *                 filter.addAction(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+     *                 filter.addAction(DownloadManager.ACTION_VIEW_DOWNLOADS);
+     *                 filter.addAction(DownloadManager.ACTION_NOTIFICATION_CLICKED);
+     *                 context.registerReceiver(completeReceiver, filter);
+     *
+     *
+     *
+     *
+     *
+     */
+
 }

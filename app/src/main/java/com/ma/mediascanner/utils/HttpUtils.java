@@ -3,7 +3,11 @@
 //
 package com.ma.mediascanner.utils;
 
+import android.content.Context;
+import android.net.Uri;
 import android.util.Log;
+
+import androidx.browser.customtabs.CustomTabsIntent;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -48,5 +52,12 @@ public class HttpUtils {
             Log.e(TAG,e.getMessage());
         }
         return null;
+    }
+
+    public static void openCustomTabs(final Context context, String url) {
+        CustomTabsIntent.Builder intentBuilder = new CustomTabsIntent.Builder();
+        intentBuilder.setShowTitle(true);
+        CustomTabsIntent customTabsIntent = intentBuilder.build();
+        customTabsIntent.launchUrl(context, Uri.parse(url));
     }
 }

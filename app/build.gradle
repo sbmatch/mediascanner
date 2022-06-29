@@ -54,5 +54,6 @@ dependencies {
     implementation 'com.alibaba.fastjson2:fastjson2:2.0.8'
     implementation 'com.google.code.gson:gson:2.8.6'
     implementation 'androidx.documentfile:documentfile:1.0.1'
+    implementation 'androidx.browser:browser:1.4.0'
 
 }
