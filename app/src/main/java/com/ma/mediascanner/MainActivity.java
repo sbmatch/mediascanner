@@ -115,13 +115,13 @@ public class MainActivity extends AppCompatActivity {
                 if (url.equals("https://tenapi.cn/lanzou/?url=https://giaosha.lanzoul.com/i2nQ5072m8sd")){
                     JSONObject update_data_json = JSONObject.parseObject(Objects.requireNonNull(response.body()).string());
                     String down_url = update_data_json.getJSONObject("data").getString("url");
-                    saveInfo("url",down_url);
-                }else {
+                    if (!down_url.isEmpty()){
+                        saveInfo("url",down_url);
+                    }
+                }
 
-                    if (url.equals("https://sbmatch.github.io/mediascanner/app/release/output-metadata.json")) {
-
-                        try {
-
+                if (url.equals("https://sbmatch.github.io/mediascanner/app/release/output-metadata.json")) {
+                    try {
                             JSONObject update_data_json = JSONObject.parseObject(Objects.requireNonNull(response.body()).string());
                             Object i = GsonUtils.toJson(update_data_json.get("elements")); // Gson ！使用反序列化
                             int codeVer = JSONObject.parseObject(new org.json.JSONArray(i + "").getString(0)).getIntValue("versionCode");
@@ -138,13 +138,11 @@ public class MainActivity extends AppCompatActivity {
                             }
 
                         } catch (Exception e) {
-
                             Log.e(TAG, e.getMessage(), e.fillInStackTrace());
-
                         }
 
-                    }
                 }
+
             } catch (IOException e) {
                 e.printStackTrace();
                 Log.e(TAG,e.getMessage(),e.fillInStackTrace());

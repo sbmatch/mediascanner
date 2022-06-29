@@ -23,7 +23,7 @@ android {
         applicationId "com.ma.updata"
         minSdk 26
         targetSdk 32
-        versionCode 3
+        versionCode 5
         versionName "1.2"
         signingConfig signingConfigs.debug
     }
