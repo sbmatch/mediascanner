@@ -26,17 +26,16 @@ public class completeReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-        if (action.hashCode() == 1248865515) {
-            if (action.equals(DownloadManager.ACTION_DOWNLOAD_COMPLETE)) {
-                try {
-                    Uri apkUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider",new File(MainActivity.APK_DOWN_PATH) );
-                    MainActivity.installApk(context,apkUri);
-                    Toast.makeText(context, "下载完成，请点击安装", Toast.LENGTH_SHORT).show();
-                } catch (RuntimeException e) {
-                    Log.e("error", e.getMessage());
-                }
+        if (action.equals(DownloadManager.ACTION_DOWNLOAD_COMPLETE)) {
+            try {
+                Uri apkUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider",new File("/storage/emulated/0/Android/data/"+BuildConfig.APPLICATION_ID+"/files/"+Environment.DIRECTORY_DOWNLOADS+"/update.apk"));
+                MainActivity.installApk(context,apkUri);
+                Toast.makeText(context, "下载完成，请点击安装", Toast.LENGTH_SHORT).show();
+            } catch (RuntimeException e) {
+                Log.e("error", e.getMessage());
             }
         }
+
     }
 
 }

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Json解析ByFastjson2</string>
+    <string name="app_name">ByFastjson2</string>
     <string name="large_text">
         "Material is the metaphor.\n\n"
 
