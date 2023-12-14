@@ -1,6 +1,5 @@
 package com.ma.mediascanner;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -14,10 +13,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -36,18 +33,14 @@ import com.danielstone.materialaboutlibrary.model.MaterialAboutList;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
-import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textview.MaterialTextView;
 import com.ma.mediascanner.utils.DocumentFileUtils;
 import com.ma.mediascanner.utils.MediaScannerUtil;
-import com.ma.mediascanner.utils.ReflectUtil;
 import com.tencent.mmkv.MMKV;
-
-import java.lang.reflect.InvocationTargetException;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     static MaterialPageFragment materialPageFragment = new MaterialPageFragment();
+    static Handler uiHandle = new Handler(Looper.getMainLooper());
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -109,8 +102,6 @@ public class MainActivity extends AppCompatActivity {
         customTabsIntent.launchUrl(context, Uri.parse(url));
     }
     public static class MaterialPageFragment extends MaterialAboutFragment {
-
-        Handler uiHandle = new Handler(Looper.getMainLooper());
         LinearLayoutCompat.LayoutParams lp = getLayoutParams();
         final MMKV selectFolderPathMMKV = MMKV.mmkvWithID("selectFolderPath");
         final ActivityResultLauncher<Uri> openTree = registerForActivityResult(new ActivityResultContracts.OpenDocumentTree(), o -> {
@@ -132,19 +123,24 @@ public class MainActivity extends AppCompatActivity {
                     AlertDialog dialog = builder.create();
                     dialog.show();
 
-                    uiHandle.post(() -> {
-                        try {
-                            for (int i = 0; i < documentF1.listFiles().length; i++){
-                                Thread.sleep(120);
-                                progressIndicator.setProgressCompat(i, true);
+                    try {
+                        for (int i = 0; i < documentF1.listFiles().length; i++){
+                            progressIndicator.setProgressCompat(i, true);
+
+                            if (progressIndicator.getProgress() == progressIndicator.getMax()-1) {
+                                MediaScannerUtil.scanFolder(requireContext(), DocumentFileUtils.getPathFromUri(requireContext(), o));
+
+                                uiHandle.postDelayed(() -> {
+                                    dialog.cancel();
+                                    Toast.makeText(requireContext(), "已刷新"+DocumentFileUtils.getKv().decodeInt("subFolderCount")+"个子文件夹", Toast.LENGTH_SHORT).show();
+                                }, 1000);
                             }
-                            dialog.cancel();
-                            MediaScannerUtil.scanFolder(requireContext(), DocumentFileUtils.getPathFromUri(requireContext(), o));
-                            Toast.makeText(requireContext(), "已刷新"+DocumentFileUtils.getKv().decodeInt("subFolderCount")+"个文件夹", Toast.LENGTH_SHORT).show();
-                        } catch (Throwable e) {
-                            throw new RuntimeException(e);
                         }
-                    });
+
+                    } catch (Throwable e) {
+                        throw new RuntimeException(e);
+                    }
+
                 }
             }
         });
