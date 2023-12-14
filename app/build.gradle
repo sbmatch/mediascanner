@@ -10,8 +10,8 @@ android {
         applicationId "com.ma.mediascanner"
         minSdk 26
         targetSdk 34
-        versionCode 125
-        versionName "1.25"
+        versionCode 126
+        versionName "1.26"
     }
 
     buildTypes {
@@ -19,12 +19,27 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+        debug {
+
+        }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    applicationVariants.configureEach { variant ->
+        // 遍历所有的变体
+        variant.outputs.configureEach {
+            // 获取应用的版本名
+            def versionName = variant.versionName
+            // 设置输出文件名
+            outputFileName = "mediascanner_v${versionName}.apk"
+        }
+    }
+
 }
+
 
 dependencies {
 
