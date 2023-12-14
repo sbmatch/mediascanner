@@ -1,34 +1,22 @@
 package com.ma.mediascanner.utils;
 
-import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.UriPermission;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.CancellationSignal;
 import android.os.Environment;
-import android.os.FileUtils;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
 import android.provider.OpenableColumns;
-import android.widget.Toast;
 
-import androidx.annotation.RequiresApi;
 import androidx.documentfile.provider.DocumentFile;
 
 import com.tencent.mmkv.MMKV;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 public class DocumentFileUtils {
-    private final static MMKV kv = MMKV.mmkvWithID(DocumentFileUtils.class.getSimpleName());
+    private final static MMKV kv = MMKV.mmkvWithID(DocumentFileUtils.class.getSimpleName(),MMKV.MULTI_PROCESS_MODE);
     public static String getPathFromUri(Context context, Uri uri) {
         String filePath = null;
         if (!DocumentFile.isDocumentUri(context, uri)) {
@@ -36,17 +24,18 @@ public class DocumentFileUtils {
                 DocumentFile documentTreeFile = DocumentFile.fromTreeUri(context, uri);
                 String path = uri.getPath();
                 if (path.startsWith("/tree/primary:")) {
-                    String orgDirPath = path.replace("/tree/primary:", Environment.getExternalStorageDirectory() + "/");
+                    filePath = path.replace("/tree/primary:", Environment.getExternalStorageDirectory() + "/");
+
                     int c = 0;
                     for (DocumentFile docu : documentTreeFile.listFiles()){
-                        //filePath = orgDirPath+"/"+docu.getName();
-                        if (docu.isDirectory()) {
+                        if (docu.isDirectory() && !docu.getName().startsWith(".")) {
                             c++;
                         }
-                        kv.clearAll();
-                        kv.encode("subFolderCount", c);
                     }
-                    filePath = orgDirPath;
+
+                    kv.clearAll();
+                    kv.encode("subFolderCount", c);
+
                 }
             }
         }else {

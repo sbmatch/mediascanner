@@ -7,7 +7,7 @@ import dalvik.system.DexClassLoader;
 
 public class MultiJarClassLoader extends ClassLoader {
     private static MultiJarClassLoader multiJarClassLoader;
-    private List<DexClassLoader> dexClassLoaders = new ArrayList<>();
+    List<DexClassLoader> dexClassLoaders = new ArrayList<>();
     private MultiJarClassLoader(ClassLoader parentClassLoader) {
         super(parentClassLoader);
     }
