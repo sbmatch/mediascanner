@@ -35,6 +35,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.textview.MaterialTextView;
 import com.ma.mediascanner.utils.DocumentFileUtils;
+import com.ma.mediascanner.utils.FilesUtils;
 import com.ma.mediascanner.utils.MediaScannerUtil;
 import com.tencent.mmkv.MMKV;
 
@@ -103,11 +104,11 @@ public class MainActivity extends AppCompatActivity {
     }
     public static class MaterialPageFragment extends MaterialAboutFragment {
         LinearLayoutCompat.LayoutParams lp = getLayoutParams();
-        final MMKV selectFolderPathMMKV = MMKV.mmkvWithID("selectFolderPath");
+        final MMKV selectFolderPathMMKV = MMKV.mmkvWithID("selectedFolderPath");
         final ActivityResultLauncher<Uri> openTree = registerForActivityResult(new ActivityResultContracts.OpenDocumentTree(), o -> {
             if (o != null) {
                // 获取持久化读权限
-                if (!DocumentFileUtils.isGrantDirPermissionFromUri(requireContext(), o)){
+                if (DocumentFileUtils.isGrantDirPermissionFromUri(requireContext(), o)){
                     requireContext().getContentResolver().takePersistableUriPermission(o, Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 }
                 DocumentFile documentF1 = DocumentFile.fromTreeUri(requireContext(), o);
@@ -129,13 +130,13 @@ public class MainActivity extends AppCompatActivity {
 
                             if (progressIndicator.getProgress() == progressIndicator.getMax()-1) {
                                 MediaScannerUtil.scanFolder(requireContext(), DocumentFileUtils.getPathFromUri(requireContext(), o));
-
-                                uiHandle.postDelayed(() -> {
-                                    dialog.cancel();
-                                    Toast.makeText(requireContext(), "已刷新"+DocumentFileUtils.getKv().decodeInt("subFolderCount")+"个子文件夹", Toast.LENGTH_SHORT).show();
-                                }, 1000);
                             }
                         }
+
+                        uiHandle.postDelayed(() -> {
+                            dialog.cancel();
+                            Toast.makeText(requireContext(), "已刷新"+ FilesUtils.subFolderCountAndStartsWithString(documentF1, ".")+"个子文件夹", Toast.LENGTH_SHORT).show();
+                        }, 1000);
 
                     } catch (Throwable e) {
                         throw new RuntimeException(e);
@@ -155,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
        final ActivityResultLauncher<Uri> grantFolderTreePermission = registerForActivityResult(new ActivityResultContracts.OpenDocumentTree(), o -> {
             if (o != null) {
                 // 获取持久化读权限
-                if (!DocumentFileUtils.isGrantDirPermissionFromUri(requireContext(), o)) {
+                if (DocumentFileUtils.isGrantDirPermissionFromUri(requireContext(), o)) {
                     requireContext().getContentResolver().takePersistableUriPermission(o, Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     Toast.makeText(requireContext(), "已授权此目录访问权限", Toast.LENGTH_SHORT).show();
                 }
@@ -208,13 +209,15 @@ public class MainActivity extends AppCompatActivity {
                 for (UriPermission uriPermission : requireContext().getContentResolver().getPersistedUriPermissions()){
                     MaterialCheckBox checkBox = new MaterialCheckBox(requireContext());
                     checkBox.setTag(uriPermission.getUri());
+                    checkBox.setId(uriPermission.getUri().hashCode());
                     checkBox.setUseMaterialThemeColors(true);
                     checkBox.setText(uriPermission.getUri().getPath());
                     checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                        selectFolderPathMMKV.importFromSharedPreferences(requireContext().getSharedPreferences("selectedFolderPath",MODE_PRIVATE));
                         if (isChecked) {
-                            selectFolderPathMMKV.encode(DocumentFileUtils.getPathFromUri(requireContext(), (Uri) buttonView.getTag()), 0);
+                            selectFolderPathMMKV.putInt(DocumentFileUtils.getPathFromUri(requireContext(), (Uri) buttonView.getTag()), buttonView.getId());
                         }else {
-                            selectFolderPathMMKV.remove(DocumentFileUtils.getPathFromUri(requireContext(), (Uri) buttonView.getTag()));
+                            selectFolderPathMMKV.putInt(DocumentFileUtils.getPathFromUri(requireContext(), (Uri) buttonView.getTag()), -1);
                         }
                     });
                     layoutCompat.addView(checkBox, lp);
@@ -223,15 +226,16 @@ public class MainActivity extends AppCompatActivity {
                 MaterialAlertDialogBuilder builder = showDialog("请勾选需要操作的文件夹", "以下列出的是所有本应用有权访问的文件夹", layoutCompat,
                         "撤销授权", (dialog, which) -> {
                             for (UriPermission uriPermission : requireContext().getContentResolver().getPersistedUriPermissions()) {
-                                if (selectFolderPathMMKV.decodeInt(DocumentFileUtils.getPathFromUri(requireContext(), uriPermission.getUri())) == 0) {
+                                if (selectFolderPathMMKV.getInt(DocumentFileUtils.getPathFromUri(requireContext(), uriPermission.getUri()), -1) == uriPermission.getUri().hashCode() && ((MaterialCheckBox)layoutCompat.findViewById(uriPermission.getUri().hashCode())).isChecked()) {
                                     requireContext().getContentResolver().releasePersistableUriPermission(uriPermission.getUri(), Intent.FLAG_GRANT_READ_URI_PERMISSION);
                                 }
                             }
                         }, "刷新目录", (dialog, which) -> {
                             for (UriPermission uriPermission : requireContext().getContentResolver().getPersistedUriPermissions()) {
-                                if (selectFolderPathMMKV.decodeInt(DocumentFileUtils.getPathFromUri(requireContext(), uriPermission.getUri())) == 0) {
+                                if (selectFolderPathMMKV.getInt(DocumentFileUtils.getPathFromUri(requireContext(), uriPermission.getUri()), -1) == uriPermission.getUri().hashCode() && ((MaterialCheckBox)layoutCompat.findViewById(uriPermission.getUri().hashCode())).isChecked()) {
                                     MediaScannerUtil.scanFolder(requireContext(),DocumentFileUtils.getPathFromUri(requireContext(), uriPermission.getUri()));
-                                    Toast.makeText(requireContext(), "已刷新"+DocumentFileUtils.getKv().decodeInt("subFolderCount")+"个文件夹", Toast.LENGTH_SHORT).show();
+                                    System.out.println(DocumentFileUtils.getPathFromUri(requireContext(), uriPermission.getUri()));
+                                    Toast.makeText(requireContext(), "已刷新"+ FilesUtils.subFolderCountAndStartsWithString(DocumentFile.fromTreeUri(requireContext(), uriPermission.getUri()), ".")+"个文件夹", Toast.LENGTH_SHORT).show();
                                 }
                             }
                         }, "授权目录", (dialog, which) -> grantFolderTreePermission.launch(Uri.parse(Intent.ACTION_OPEN_DOCUMENT_TREE)));

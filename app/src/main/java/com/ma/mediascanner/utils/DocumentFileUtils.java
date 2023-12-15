@@ -10,32 +10,16 @@ import android.provider.OpenableColumns;
 
 import androidx.documentfile.provider.DocumentFile;
 
-import com.tencent.mmkv.MMKV;
-
 import java.util.List;
-import java.util.concurrent.Executors;
 
 public class DocumentFileUtils {
-    private final static MMKV kv = MMKV.mmkvWithID(DocumentFileUtils.class.getSimpleName(),MMKV.MULTI_PROCESS_MODE);
     public static String getPathFromUri(Context context, Uri uri) {
         String filePath = null;
         if (!DocumentFile.isDocumentUri(context, uri)) {
             if (uri.getPath().contains("tree")){
-                DocumentFile documentTreeFile = DocumentFile.fromTreeUri(context, uri);
                 String path = uri.getPath();
                 if (path.startsWith("/tree/primary:")) {
                     filePath = path.replace("/tree/primary:", Environment.getExternalStorageDirectory() + "/");
-
-                    int c = 0;
-                    for (DocumentFile docu : documentTreeFile.listFiles()){
-                        if (docu.isDirectory() && !docu.getName().startsWith(".")) {
-                            c++;
-                        }
-                    }
-
-                    kv.clearAll();
-                    kv.encode("subFolderCount", c);
-
                 }
             }
         }else {
@@ -55,9 +39,9 @@ public class DocumentFileUtils {
     public static boolean isGrantDirPermissionFromUri(Context context, Uri uri) {
         List<UriPermission> uriPermissionList = context.getContentResolver().getPersistedUriPermissions();
         for (UriPermission persistedUriPermission : uriPermissionList) {
-           return persistedUriPermission.getUri().equals(uri) && persistedUriPermission.isReadPermission();
+           return !persistedUriPermission.getUri().equals(uri) || !persistedUriPermission.isReadPermission();
         }
-        return false;
+        return true;
     }
 
     /**
@@ -84,9 +68,5 @@ public class DocumentFileUtils {
             e.printStackTrace();
         }
         return filePath;
-    }
-
-    public static MMKV getKv() {
-        return kv;
     }
 }

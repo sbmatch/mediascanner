@@ -1,5 +1,7 @@
 package com.ma.mediascanner.utils;
 
+import androidx.documentfile.provider.DocumentFile;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -234,5 +236,29 @@ public class FilesUtils {
         return matchingFiles.get(0);
     }
 
+    public static int subFolderCount(String directoryPath){
+        File directory = new File(directoryPath);
+        List<File> subDirPaths = new ArrayList<>();
+        for (File file : directory.listFiles()){
+            if (file.isDirectory()) subDirPaths.add(file);
+        }
+        return subDirPaths.size();
+    }
+
+    public static int subFolderCount(DocumentFile documentFile){
+        List<DocumentFile> subDirPaths = new ArrayList<>();
+        for (DocumentFile file : documentFile.listFiles()){
+            if (file.isDirectory()) subDirPaths.add(file);
+        }
+        return subDirPaths.size();
+    }
+
+    public static int subFolderCountAndStartsWithString(DocumentFile documentFile, String prefix){
+        List<DocumentFile> subDirPaths = new ArrayList<>();
+        for (DocumentFile file : documentFile.listFiles()){
+            if (file.isDirectory() && file.getName().startsWith(prefix)) subDirPaths.add(file);
+        }
+        return subDirPaths.size();
+    }
 
 }
