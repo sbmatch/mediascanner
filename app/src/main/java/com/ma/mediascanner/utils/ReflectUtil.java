@@ -14,6 +14,12 @@ public class ReflectUtil {
         return declaredMethod.invoke(obj, args);
     }
 
+    public static Object callObjectMethod(Object obj, String methodName, Class<?> cls) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        Method declaredMethod = cls.getDeclaredMethod(methodName);
+        declaredMethod.setAccessible(true);
+        return declaredMethod.invoke(obj);
+    }
+
     public static Object callObjectMethod(Object obj, String methodName, Class<?> cls, Class<?>[] parameterTypes, Object... args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         Method declaredMethod = cls.getDeclaredMethod(methodName, parameterTypes);
         declaredMethod.setAccessible(true);
